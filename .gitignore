@@ -1,0 +1,57 @@
+HELP.md
+target/
+.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+### STS ###
+.apt_generated
+.classpath
+.factorypath
+.project
+.settings
+.springBeans
+.sts4-cache
+
+### IntelliJ IDEA ###
+.idea
+*.iws
+*.iml
+*.ipr
+
+### NetBeans ###
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+### VS Code ###
+.vscode/
+
+# Maven / target
+/target/
+!.mvn/wrapper/maven-wrapper.jar
+
+# IntelliJ / VSCode
+/.idea/
+/*.iml
+.vscode/
+
+# Logs and tmp
+*.log
+*.tmp
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Eclipse
+.settings/
+
+# Application secrets (keep them out of git)
+src/main/resources/application.properties
+
