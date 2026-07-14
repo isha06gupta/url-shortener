@@ -1,35 +1,155 @@
-# URL Shortener (Spring Boot + MySQL)
+# URL Shortener
 
-A lightweight URL Shortener built using Spring Boot.  
-It converts long URLs into short codes, stores them in MySQL, and redirects instantly when the short URL is opened.
+A backend URL Shortener built with Spring Boot, Spring Data JPA, MySQL, and Flyway. The service creates compact short links, redirects users to the original URL, tracks click counts, supports custom aliases, and can expire links after a configured number of days.
 
----
+## Project Overview
 
-## 🚀 Features
+This project demonstrates a clean REST API backed by persistent storage and database migrations. It is structured around a simple controller-service-repository flow, with DTO validation, centralized exception handling, environment-specific configuration, and H2-backed automated tests.
 
-- Generate short URLs for any long link  
-- Redirect short URL → original URL  
-- Track click counts  
-- View stored URL details  
-- Delete a short URL  
-- MySQL-backed storage  
-- Clean REST API design  
+## Features
 
----
+- Generate short URLs for long HTTP/HTTPS links
+- Redirect short URLs to original URLs
+- Create custom aliases
+- Track redirect click counts
+- View URL metadata
+- Delete short URLs
+- Optional link expiration using TTL days
+- MySQL persistence with Flyway-managed schema
+- H2-based test profile for local test execution
 
-## 📌 API Endpoints
+## Architecture Diagram
 
-### 1. Create Short URL  
-**POST** `/api/shorten`
+```mermaid
+flowchart TD
+    Client["Client / API Tool"] --> Controller["UrlController"]
+    Controller --> Service["ShortUrlService"]
+    Service --> Repository["ShortUrlRepository"]
+    Repository --> Database["MySQL Database"]
+    Flyway["Flyway Migrations"] --> Database
 
-Request Body:
+    Controller --> ErrorHandler["GlobalExceptionHandler"]
+```
+
+## Database Schema Summary
+
+Main table: `short_urls`
+
+| Column | Purpose |
+| --- | --- |
+| `id` | Primary key |
+| `long_url` | Original destination URL |
+| `short_code` | Unique generated code or custom alias |
+| `created_at` | Creation timestamp |
+| `expires_at` | Optional expiration timestamp |
+| `click_count` | Number of successful redirects |
+| `created_by` | Optional owner field for future user support |
+
+The `short_code` column is unique and indexed for fast lookups during redirects.
+
+## Flyway Migration Workflow
+
+Flyway manages database schema creation and versioning.
+
+- Migration files live in `src/main/resources/db/migration`
+- The initial schema is defined in `V1__create_short_urls_table.sql`
+- Application startup runs pending migrations before JPA validation
+- JPA uses `ddl-auto=validate`, so production does not rely on automatic schema creation
+
+For future schema changes, add a new migration such as:
+
+```text
+V2__add_new_column.sql
+```
+
+## Local Development Setup
+
+Requirements:
+
+- Java 17
+- Maven wrapper included
+- MySQL running locally
+
+Create the local database:
+
+```sql
+CREATE DATABASE url_shortener;
+```
+
+Update `src/main/resources/application-dev.properties` with your local MySQL credentials if needed.
+
+Run the application:
+
+```bash
+./mvnw spring-boot:run
+```
+
+On Windows:
+
+```bash
+mvnw.cmd spring-boot:run
+```
+
+The default development base URL is:
+
+```text
+http://localhost:8080
+```
+
+## Environment Variables
+
+The production profile reads configuration from environment variables:
+
+| Variable | Purpose |
+| --- | --- |
+| `SERVER_PORT` | Server port, defaults to `8080` |
+| `DATABASE_URL` | JDBC database URL |
+| `DATABASE_USERNAME` | Database username |
+| `DATABASE_PASSWORD` | Database password |
+| `APP_BASE_URL` | Public base URL used when returning short links |
+
+Run with the production profile:
+
+```bash
+mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=prod
+```
+
+## Running Tests
+
+Tests use the `test` profile and an in-memory H2 database, so MySQL is not required.
+
+```bash
+mvnw.cmd test
+```
+
+The test suite covers:
+
+- URL creation
+- Custom alias creation
+- Alias collision handling
+- Redirect and click count behavior
+- Expired URL behavior
+- Delete behavior
+- Validation failures
+- Flyway migration execution
+
+## API Examples
+
+### Create Short URL
+
+```http
+POST /api/shorten
+Content-Type: application/json
+```
+
 ```json
 {
   "longUrl": "https://www.youtube.com"
 }
 ```
 
-Example Response:
+Example response:
+
 ```json
 {
   "shortUrl": "http://localhost:8080/rqEDAfp",
@@ -37,98 +157,70 @@ Example Response:
 }
 ```
 
----
+### Create Short URL With Custom Alias
 
-### 2. Redirect to Original URL  
-**GET** `/{shortCode}`  
+```json
+{
+  "longUrl": "https://www.example.com/profile",
+  "customAlias": "my-profile"
+}
+```
 
-Example:  
-`http://localhost:8080/rqEDAfp` → redirects to YouTube.
+### Create Expiring Short URL
 
----
+```json
+{
+  "longUrl": "https://www.example.com/campaign",
+  "ttlDays": 7
+}
+```
 
-### 3. Get URL Info  
-**GET** `/api/info/{shortCode}`  
+### Redirect
 
-Response:
+```http
+GET /{shortCode}
+```
+
+Example:
+
+```text
+http://localhost:8080/rqEDAfp
+```
+
+### Get URL Info
+
+```http
+GET /api/info/{shortCode}
+```
+
+Example response:
+
 ```json
 {
   "longUrl": "https://www.youtube.com",
   "shortCode": "rqEDAfp",
   "clickCount": 5,
-  "createdAt": "2025-12-09T14:22:01"
+  "createdAt": "2025-12-09T14:22:01",
+  "expiresAt": null
 }
 ```
 
----
+### Delete Short URL
 
-### 4. Delete a Short URL  
-**DELETE** `/api/{shortCode}`  
-
-Deletes the entry from the database.
-
----
-
-## 🛠 Tech Stack
-
-- Java 17  
-- Spring Boot 4  
-- Spring Web  
-- Spring Data JPA  
-- MySQL  
-- Hibernate  
-- Lombok  
-- Thunder Client / Postman  
-
----
-
-## ⚙️ How to Run the Project
-
-### 1. Create MySQL Database
-```sql
-CREATE DATABASE url_shortener;
+```http
+DELETE /api/{shortCode}
 ```
 
-### 2. Update `application.properties`
-```properties
-server.port=8080
-spring.application.name=urlshortener
+Returns `204 No Content` when deletion succeeds.
 
-spring.datasource.url=jdbc:mysql://localhost:3306/url_shortener?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-spring.datasource.username=root
-spring.datasource.password=YOUR_PASSWORD
+## Future Improvements
 
-spring.jpa.hibernate.ddl-auto=update
-spring.jpa.show-sql=false
+- Add authentication and user-owned links
+- Add rate limiting and abuse protection
+- Add Redis caching for redirect lookups
+- Move analytics tracking to an async pipeline
+- Add richer analytics such as referrer, browser, and location
+- Add Docker and deployment configuration
+- Add CI/CD workflow
+- Add production monitoring and structured logging
 
-app.base-url=http://localhost:8080
-```
-
-### 3. Start the Backend
-```bash
-mvn spring-boot:run
-```
-
-### 4. Test the API  
-Use Thunder Client or Postman.
-
----
-
-## 📸 Example Screenshot  
-(Add your screenshot showing POST request and response.)
-
----
-
-## 🔮 Future Improvements
-
-- Custom aliases (user-defined short codes)  
-- Expiration time for links  
-- Analytics dashboard  
-- Rate limiting  
-
----
-
-## 👩‍💻 Author
-
-**Isha Gupta**  
-Built while learning Spring Boot & backend system design.

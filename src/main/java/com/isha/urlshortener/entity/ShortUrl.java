@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "short_urls", indexes = {
-        @Index(name = "idx_short_code", columnList = "shortCode")
+        @Index(name = "idx_short_code", columnList = "short_code")
 })
 @Getter
 @Setter
@@ -20,20 +20,21 @@ public class ShortUrl {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable=false, length = 2048)
+    @Column(name = "long_url", nullable=false, length = 2048)
     private String longUrl;
 
-    @Column(nullable=false, unique=true, length = 128)
+    @Column(name = "short_code", nullable=false, unique=true, length = 128)
     private String shortCode;
 
-    @Column(nullable=false)
+    @Column(name = "created_at", nullable=false)
     private LocalDateTime createdAt;
 
+    @Column(name = "expires_at")
     private LocalDateTime expiresAt;
 
-    @Column(nullable=false)
+    @Column(name = "click_count", nullable=false)
     private Long clickCount = 0L;
 
-    @Column(length = 100)
+    @Column(name = "created_by", length = 100)
     private String createdBy; // optional: owner info
 }
